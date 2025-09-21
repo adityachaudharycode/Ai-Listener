@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chat Companion</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
+</head>
+<body>
+    <!-- Landing Page Section -->
+    <div id="landing-page" class="landing-section">
+        <div class="landing-content animate__animated animate__fadeIn">
+            <h1 class="main-title">Welcome to AI Chat Companion</h1>
+            <p class="subtitle">Your empathetic friend, ready to listen and chat</p>
+            <div class="features-grid">
+                <div class="feature-card animate__animated animate__fadeInUp">
+                    <span class="feature-icon">🤝</span>
+                    <h3>Empathetic Listening</h3>
+                    <p>Share your thoughts with a companion who truly understands</p>
+                </div>
+                <div class="feature-card animate__animated animate__fadeInUp" style="animation-delay: 0.2s">
+                    <span class="feature-icon">🔒</span>
+                    <h3>Private & Secure</h3>
+                    <p>Your conversations are completely private and secure</p>
+                </div>
+                <div class="feature-card animate__animated animate__fadeInUp" style="animation-delay: 0.4s">
+                    <span class="feature-icon">💡</span>
+                    <h3>Smart Responses</h3>
+                    <p>Get intelligent and meaningful conversations</p>
+                </div>
+            </div>
+            <button id="start-chat" class="cta-button animate__animated animate__pulse animate__infinite">
+                Start Chatting Now
+            </button>
+        </div>
+        
+        <!-- Wave Animation -->
+        <div class="wave-container">
+            <svg class="wave" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320">
+                <path fill="var(--primary-color)" fill-opacity="0.5" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,112C672,96,768,96,864,112C960,128,1056,160,1152,160C1248,160,1344,128,1392,112L1440,96L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path>
+            </svg>
+        </div>
+    </div>
+
+    <!-- Chat Interface Section (Initially Hidden) -->
+    <div id="chat-interface" class="container" style="display: none;">
+        <div class="chat-container animate__animated animate__fadeIn">
+            <div class="chat-header">
+                <button onclick="returnHome()" class="home-button" title="Return to home">
+                    <span class="icon">🏠</span>
+                </button>
+                <h1>Your Friendly Chat Companion</h1>
+                <p>Feel free to share anything that's on your mind. I'm here to listen.</p>
+                <div class="header-buttons">
+                    <button onclick="clearHistory()" class="clear-history" title="Clear chat history">
+                        <span class="icon">🗑️</span>
+                    </button>
+                    <button onclick="toggleDarkMode()" class="theme-toggle" title="Toggle dark mode">
+                        <span class="icon">🌓</span>
+                    </button>
+                </div>
+            </div>
+            <div class="chat-messages" id="chat-messages"></div>
+            <div class="typing-indicator" id="typing-indicator" style="display: none;">
+                <span></span><span></span><span></span>
+            </div>
+            <div class="chat-input">
+                <div class="input-wrapper">
+                    <div id="char-count" class="char-count">500 characters remaining</div>
+                    <textarea 
+                        id="user-input" 
+                        placeholder="Type your message here..."
+                        maxlength="500"
+                        aria-label="Message input"
+                    ></textarea>
+                </div>
+                <button onclick="sendMessage()" id="send-button" class="send-button" title="Send message">
+                    <span class="icon">📤</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const MAX_MESSAGE_LENGTH = 500;
+        let chatHistory = [];
+        let isTyping = false;
+
+        // Dark mode handling
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
+        }
+
+        // Load dark mode preference
+        if (localStorage.getItem('darkMode') === 'true') {
+            document.body.classList.add('dark-mode');
+        }
+
+        function loadChatHistory() {
+            const savedHistory = localStorage.getItem('chatHistory');
+            if (savedHistory) {
+                chatHistory = JSON.parse(savedHistory);
+                chatHistory.forEach(msg => {
+                    addMessage(msg.text, msg.isUser, msg.timestamp, false);
+                });
+            }
+        }
+
+        function saveChatHistory() {
+            localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
+        }
+
+        function formatTimestamp(timestamp) {
+            const date = new Date(timestamp);
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function addMessage(message, isUser, timestamp = new Date().toISOString(), save = true) {
+            const messagesDiv = document.getElementById('chat-messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
+            
+            const textDiv = document.createElement('div');
+            textDiv.className = 'message-text';
+            textDiv.textContent = message;
+            
+            const timeDiv = document.createElement('div');
+            timeDiv.className = 'message-timestamp';
+            timeDiv.textContent = formatTimestamp(timestamp);
+            
+            messageDiv.appendChild(textDiv);
+            messageDiv.appendChild(timeDiv);
+            messagesDiv.appendChild(messageDiv);
+            
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+            if (save) {
+                chatHistory.push({
+                    text: message,
+                    isUser: isUser,
+                    timestamp: timestamp
+                });
+                saveChatHistory();
+            }
+        }
+
+        function showTypingIndicator() {
+            document.getElementById('typing-indicator').style.display = 'block';
+            document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight;
+        }
+
+        function hideTypingIndicator() {
+            document.getElementById('typing-indicator').style.display = 'none';
+        }
+
+        function updateCharacterCount(textarea) {
+            const remaining = MAX_MESSAGE_LENGTH - textarea.value.length;
+            const charCount = document.getElementById('char-count');
+            charCount.textContent = `${remaining} characters remaining`;
+            charCount.className = `char-count ${remaining < 50 ? 'warning' : ''}`;
+        }
+
+        async function sendMessage() {
+            if (isTyping) return;
+
+            const input = document.getElementById('user-input');
+            const message = input.value.trim();
+            const sendButton = document.getElementById('send-button');
+            
+            if (!message) return;
+            
+            if (message.length > MAX_MESSAGE_LENGTH) {
+                addMessage('Message too long. Please keep it under 500 characters.', false);
+                return;
+            }
+            
+            isTyping = true;
+            sendButton.disabled = true;
+            input.value = '';
+            updateCharacterCount(input);
+            addMessage(message, true);
+            showTypingIndicator();
+
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ message: message })
+                });
+
+                const data = await response.json();
+                hideTypingIndicator();
+                
+                if (response.ok) {
+                    addMessage(data.response, false, data.timestamp);
+                } else {
+                    addMessage(`Error: ${data.error}`, false);
+                }
+            } catch (error) {
+                hideTypingIndicator();
+                addMessage('Sorry, I encountered an error. Please try again.', false);
+            } finally {
+                isTyping = false;
+                sendButton.disabled = false;
+                input.focus();
+            }
+        }
+
+        async function clearHistory() {
+            if (confirm('Are you sure you want to clear the chat history?')) {
+                try {
+                    await fetch('/clear-history', { method: 'POST' });
+                    localStorage.removeItem('chatHistory');
+                    chatHistory = [];
+                    document.getElementById('chat-messages').innerHTML = '';
+                } catch (error) {
+                    console.error('Failed to clear history:', error);
+                }
+            }
+        }
+
+        function returnHome() {
+            document.getElementById('chat-interface').classList.add('animate__animated', 'animate__fadeOutDown');
+            setTimeout(() => {
+                document.getElementById('chat-interface').style.display = 'none';
+                document.getElementById('landing-page').style.display = 'flex';
+                document.getElementById('landing-page').classList.remove('animate__fadeOutUp');
+                document.getElementById('landing-page').classList.add('animate__animated', 'animate__fadeInDown');
+            }, 500);
+        }
+
+        // Event Listeners
+        document.getElementById('user-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        document.getElementById('user-input').addEventListener('input', function() {
+            updateCharacterCount(this);
+        });
+
+        // Add new landing page transition
+        document.getElementById('start-chat').addEventListener('click', function() {
+            document.getElementById('landing-page').classList.add('animate__animated', 'animate__fadeOutUp');
+            setTimeout(() => {
+                document.getElementById('landing-page').style.display = 'none';
+                document.getElementById('chat-interface').style.display = 'block';
+                document.getElementById('chat-interface').classList.remove('animate__fadeOutDown');
+                // Add welcome message
+                addMessage("Hello! I'm your AI chat companion. How are you feeling today?", false);
+            }, 500);
+        });
+
+        // Initialize
+        window.addEventListener('load', loadChatHistory);
+    </script>
+</body>
+</html>
+
+
+
